@@ -7,7 +7,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <math.h> // for sqrt and sqrtf
+#include <math.h> // for sqrt and sqrtf, and rounding
 #include <string>
 #include <tgmath.h> // for sqrtl
 #include <vector>
@@ -54,8 +54,11 @@ template<> inline long double stringToFP(const std::string &numString)
 }
 
 // load interval data from file
+// @param dataFilePath path to data file where each line contains a single
+//                     decimal value in string form.
+// @param roundTo number of decimal places to round each value to (-1 for none)
 template <typename T>
-std::vector<T> loadIntervals(const std::string &dataFilePath)
+std::vector<T> loadIntervals(const std::string &dataFilePath, int roundTo = -1)
 {
     std::vector<T> intervals;
 
@@ -74,6 +77,13 @@ std::vector<T> loadIntervals(const std::string &dataFilePath)
     while (std::getline(infile, numString))
     {
         T num = ::stringToFP<T>(numString);
+
+        if (roundTo >= 0)
+        {
+            T multiplier = static_cast<T>(std::pow(10.0, roundTo));
+            num = round(num * multiplier) / multiplier;
+        }
+
         intervals.push_back(num);
     }
 
@@ -82,10 +92,14 @@ std::vector<T> loadIntervals(const std::string &dataFilePath)
     return intervals;
 }
 
+// calculate the RMSSD from values in a text file.
+// @param dataFilePath path to data file where each line contains a single
+//                     decimal value in string form.
+// @param roundTo number of decimal places to round each value to (-1 for none)
 template <typename T>
-T calculateRMSSD(const std::string &dataFilePath)
+T calculateRMSSD(const std::string &dataFilePath, int roundTo = -1)
 {
-    std::vector<T> intervals(::loadIntervals<T>(dataFilePath));
+    std::vector<T> intervals(::loadIntervals<T>(dataFilePath, roundTo));
 
     // sanity checks
     if (intervals.size() < 2)
@@ -165,14 +179,26 @@ int main()
 
         std::cout << "long double" << std::endl;
         std::cout << ::calculateRMSSD<long double>(dataFilePath) << std::endl;
+        std::cout << std::endl;
+
+        std::cout << "float (rounded to 3 decimal places)" << std::endl;
+        std::cout << ::calculateRMSSD<float>(dataFilePath, 3) << std::endl;
+        std::cout << std::endl;
+
+        std::cout << "double (rounded to 3 decimal places)" << std::endl;
+        std::cout << ::calculateRMSSD<double>(dataFilePath, 3) << std::endl;
+        std::cout << std::endl;
+
+        std::cout << "long double (rounded to 3 decimal places)" << std::endl;
+        std::cout << ::calculateRMSSD<long double>(dataFilePath, 3) << std::endl;
+        std::cout << std::endl;
     }
     catch (InvalidArgument &e)
     {
         std::cerr << "ERROR: " << e.what() << std::endl;
     }
 
-    std::cout << std::endl
-              << "Press <enter> to exit" << std::endl;
+    std::cout << "Press <enter> to exit" << std::endl;
     std::cin.get();
 
     return EXIT_SUCCESS;
